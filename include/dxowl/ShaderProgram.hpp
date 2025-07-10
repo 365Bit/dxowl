@@ -20,6 +20,7 @@ namespace dxowl
         enum ShaderType
         {
             VertexShader,
+            ComputeShader,
             GeometryShader,
             PixelShader
         };
@@ -29,6 +30,7 @@ namespace dxowl
             ID3D11Device4* d3d11_device,
             std::vector<VertexDescriptor> vertex_desc,
             ShaderFileDataContainer vertex_shader,
+            ShaderFileDataContainer compute_shader,
             ShaderFileDataContainer geometry_shader,
             ShaderFileDataContainer pixel_shader);
         ShaderProgram(
@@ -36,6 +38,8 @@ namespace dxowl
             std::vector<VertexDescriptor> vertex_desc,
             void const *vertex_shader,
             size_t vertex_shader_byteSize,
+            void const* compute_shader,
+            size_t compute_shader_byteSize,
             void const *geometry_shader,
             size_t geometry_shader_byteSize,
             void const *pixel_shader,
@@ -49,12 +53,14 @@ namespace dxowl
 
         void setInputLayout(ID3D11DeviceContext4* d3d11_ctx);
         void setVertexShader(ID3D11DeviceContext4* d3d11_ctx);
+        void setComputeShader(ID3D11DeviceContext4* d3d11_ctx);
         void setGeometryShader(ID3D11DeviceContext4* d3d11_ctx);
         void setPixelShader(ID3D11DeviceContext4* d3d11_ctx);
 
     private:
         Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
         Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
+        Microsoft::WRL::ComPtr<ID3D11ComputeShader> m_computeShader;
         Microsoft::WRL::ComPtr<ID3D11GeometryShader> m_geometryShader;
         Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
     };
@@ -64,9 +70,10 @@ namespace dxowl
         ID3D11Device4* d3d11_device,
         std::vector<VertexDescriptor> vertex_desc,
         ShaderFileDataContainer vertex_shader,
+        ShaderFileDataContainer compute_shader,
         ShaderFileDataContainer geometry_shader,
         ShaderFileDataContainer pixel_shader)
-        : m_inputLayout(nullptr), m_vertexShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
+        : m_inputLayout(nullptr), m_vertexShader(nullptr), m_computeShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
     {
         winrt::check_hresult(
             d3d11_device->CreateVertexShader(
@@ -94,6 +101,16 @@ namespace dxowl
                 nullptr,
                 &m_pixelShader));
 
+        if (compute_shader.size() > 0) // check if data for optional compute shader is given
+        {
+            winrt::check_hresult(
+                d3d11_device->CreateComputeShader(
+                    compute_shader.data(),
+                    compute_shader.size(),
+                    nullptr,
+                    &m_computeShader));
+        }
+
         if (geometry_shader.size() > 0) // check if data for optional geometry shader is given
         {
             winrt::check_hresult(
@@ -110,11 +127,13 @@ namespace dxowl
         std::vector<VertexDescriptor> vertex_desc,
         void const *vertex_shader,
         size_t vertex_shader_byteSize,
+        void const* compute_shader,
+        size_t compute_shader_byteSize,
         void const *geometry_shader,
         size_t geometry_shader_byteSize,
         void const *pixel_shader,
         size_t pixel_shader_byteSize)
-        : m_inputLayout(nullptr), m_vertexShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
+        : m_inputLayout(nullptr), m_vertexShader(nullptr), m_computeShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
     {
         winrt::check_hresult(
             d3d11_device->CreateVertexShader(
@@ -142,6 +161,16 @@ namespace dxowl
                 nullptr,
                 &m_pixelShader));
 
+        if (compute_shader != nullptr) // check if data for optional compute shader is given
+        {
+            winrt::check_hresult(
+                d3d11_device->CreateComputeShader(
+                    compute_shader,
+                    compute_shader_byteSize,
+                    nullptr,
+                    &m_computeShader));
+        }
+
         if (geometry_shader != nullptr) // check if data for optional geometry shader is given
         {
             winrt::check_hresult(
@@ -164,6 +193,17 @@ namespace dxowl
             m_vertexShader.Get(),
             nullptr,
             0);
+    }
+
+    inline void ShaderProgram::setComputeShader(ID3D11DeviceContext4* d3d11_ctx)
+    {
+        if (m_computeShader != nullptr)
+        {
+            d3d11_ctx->CSSetShader(
+                m_computeShader.Get(),
+                nullptr,
+                0);
+        }
     }
 
     inline void ShaderProgram::setGeometryShader(ID3D11DeviceContext4* d3d11_ctx)
