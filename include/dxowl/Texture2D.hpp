@@ -27,7 +27,9 @@ namespace dxowl
             ID3D11Device4* d3d11_device,
             TexelDataContainer const& data,
             D3D11_TEXTURE2D_DESC const& desc,
-            D3D11_UNORDERED_ACCESS_VIEW_DESC const& unord_acc_view_desc);
+            D3D11_UNORDERED_ACCESS_VIEW_DESC const& unord_acc_view_desc,
+            D3D11_SHADER_RESOURCE_VIEW_DESC const* shdr_rsrc_view = nullptr,
+            bool generate_mipmap = false);
 
         template <typename TexelDataPtr>
         Texture2D(
@@ -42,7 +44,9 @@ namespace dxowl
             ID3D11Device4* d3d11_device,
             std::vector<TexelDataPtr> const &data,
             D3D11_TEXTURE2D_DESC const &desc,
-            D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view);
+            D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view,
+            D3D11_SHADER_RESOURCE_VIEW_DESC const *shdr_rsrc_view = nullptr,
+            bool generate_mipmap = false);
 
         ~Texture2D(){}; //TODO
 
@@ -54,6 +58,11 @@ namespace dxowl
         inline Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> getShaderResourceView() const
         {
             return m_shdr_rsrc_view;
+        }
+
+        inline Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> getUnorderedAccessView() const
+        {
+            return m_unord_acc_view;
         }
 
         inline Microsoft::WRL::ComPtr<ID3D11Texture2D> getTexture() const {
@@ -95,12 +104,16 @@ namespace dxowl
         ID3D11Device4* d3d11_device,
         TexelDataContainer const &data,
         D3D11_TEXTURE2D_DESC const &desc,
-        D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view_desc)
+        D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view_desc,
+        D3D11_SHADER_RESOURCE_VIEW_DESC const *shdr_rsrc_view,
+        bool generate_mipmap)
         : Texture2D(
               d3d11_device,
               {data.data()},
               desc,
-              unord_acc_view_desc)
+              unord_acc_view_desc,
+              shdr_rsrc_view,
+              generate_mipmap)
     {
     }
 
@@ -150,7 +163,9 @@ namespace dxowl
         ID3D11Device4* d3d11_device,
         std::vector<TexelDataPtr> const &data,
         D3D11_TEXTURE2D_DESC const &desc,
-        D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view)
+        D3D11_UNORDERED_ACCESS_VIEW_DESC const &unord_acc_view,
+        D3D11_SHADER_RESOURCE_VIEW_DESC const *shdr_rsrc_view,
+        bool generate_mipmap)
         : m_desc(desc), m_unord_acc_view_desc(unord_acc_view)
     {
         std::vector<D3D11_SUBRESOURCE_DATA> pData(data.size());
@@ -173,6 +188,36 @@ namespace dxowl
             m_texture.Get(),
             &m_unord_acc_view_desc,
             m_unord_acc_view.GetAddressOf());
+
+        if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+        {
+            if (!shdr_rsrc_view)
+            {
+                D3D11_SHADER_RESOURCE_VIEW_DESC shdr_rsrc_view_desc;
+
+                ZeroMemory(&shdr_rsrc_view_desc, sizeof(shdr_rsrc_view_desc));
+
+                shdr_rsrc_view_desc.Format = desc.Format;
+                shdr_rsrc_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                shdr_rsrc_view_desc.Texture2D.MostDetailedMip = 0;
+                shdr_rsrc_view_desc.Texture2D.MipLevels = desc.MipLevels;
+
+                shdr_rsrc_view = &shdr_rsrc_view_desc;
+            }
+
+            hr = d3d11_device->CreateShaderResourceView(
+                m_texture.Get(),
+                shdr_rsrc_view,
+                m_shdr_rsrc_view.GetAddressOf());
+
+            if (generate_mipmap) {
+                Microsoft::WRL::ComPtr<ID3D11DeviceContext> ctx;
+                d3d11_device->GetImmediateContext(ctx.GetAddressOf());
+
+                // generate mipmap if requested using device context
+                ctx->GenerateMips(m_shdr_rsrc_view.Get());
+            }
+        }
     }
 } // namespace dxowl
 
