@@ -75,31 +75,33 @@ namespace dxowl
         ShaderFileDataContainer pixel_shader)
         : m_inputLayout(nullptr), m_vertexShader(nullptr), m_computeShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
     {
-        winrt::check_hresult(
-            d3d11_device->CreateVertexShader(
-                vertex_shader.data(),
-                vertex_shader.size(),
-                nullptr,
-                &m_vertexShader));
+        if (vertex_shader.size() > 0 && pixel_shader.size() > 0) {
+            winrt::check_hresult(
+                d3d11_device->CreateVertexShader(
+                    vertex_shader.data(),
+                    vertex_shader.size(),
+                    nullptr,
+                    &m_vertexShader));
 
-        std::vector<D3D11_INPUT_ELEMENT_DESC> attributes;
-        for (auto& vl : vertex_desc) {
-            attributes.insert(std::end(attributes), std::begin(vl.attributes), std::end(vl.attributes));
+            std::vector<D3D11_INPUT_ELEMENT_DESC> attributes;
+            for (auto& vl : vertex_desc) {
+                attributes.insert(std::end(attributes), std::begin(vl.attributes), std::end(vl.attributes));
+            }
+            winrt::check_hresult(
+                d3d11_device->CreateInputLayout(
+                    attributes.data(),
+                    static_cast<UINT>(attributes.size()),
+                    vertex_shader.data(),
+                    static_cast<UINT>(vertex_shader.size()),
+                    &m_inputLayout));
+
+            winrt::check_hresult(
+                d3d11_device->CreatePixelShader(
+                    pixel_shader.data(),
+                    pixel_shader.size(),
+                    nullptr,
+                    &m_pixelShader));
         }
-        winrt::check_hresult(
-            d3d11_device->CreateInputLayout(
-                attributes.data(),
-                static_cast<UINT>(attributes.size()),
-                vertex_shader.data(),
-                static_cast<UINT>(vertex_shader.size()),
-                &m_inputLayout));
-
-        winrt::check_hresult(
-            d3d11_device->CreatePixelShader(
-                pixel_shader.data(),
-                pixel_shader.size(),
-                nullptr,
-                &m_pixelShader));
 
         if (compute_shader.size() > 0) // check if data for optional compute shader is given
         {
@@ -135,31 +137,34 @@ namespace dxowl
         size_t pixel_shader_byteSize)
         : m_inputLayout(nullptr), m_vertexShader(nullptr), m_computeShader(nullptr), m_geometryShader(nullptr), m_pixelShader(nullptr)
     {
-        winrt::check_hresult(
-            d3d11_device->CreateVertexShader(
-                vertex_shader,
-                vertex_shader_byteSize,
-                nullptr,
-                &m_vertexShader));
+        if (vertex_shader != nullptr && pixel_shader != nullptr)
+        {
+            winrt::check_hresult(
+                d3d11_device->CreateVertexShader(
+                    vertex_shader,
+                    vertex_shader_byteSize,
+                    nullptr,
+                    &m_vertexShader));
 
-        std::vector<D3D11_INPUT_ELEMENT_DESC> attributes;
-        for (auto& vl : vertex_desc) {
-            attributes.insert(std::end(attributes), std::begin(vl.attributes), std::end(vl.attributes));
+            std::vector<D3D11_INPUT_ELEMENT_DESC> attributes;
+            for (auto& vl : vertex_desc) {
+                attributes.insert(std::end(attributes), std::begin(vl.attributes), std::end(vl.attributes));
+            }
+            winrt::check_hresult(
+                d3d11_device->CreateInputLayout(
+                    attributes.data(),
+                    static_cast<UINT>(attributes.size()),
+                    vertex_shader,
+                    static_cast<UINT>(vertex_shader_byteSize),
+                    &m_inputLayout));
+
+            winrt::check_hresult(
+                d3d11_device->CreatePixelShader(
+                    pixel_shader,
+                    pixel_shader_byteSize,
+                    nullptr,
+                    &m_pixelShader));
         }
-        winrt::check_hresult(
-            d3d11_device->CreateInputLayout(
-                attributes.data(),
-                static_cast<UINT>(attributes.size()),
-                vertex_shader,
-                static_cast<UINT>(vertex_shader_byteSize),
-                &m_inputLayout));
-
-        winrt::check_hresult(
-            d3d11_device->CreatePixelShader(
-                pixel_shader,
-                pixel_shader_byteSize,
-                nullptr,
-                &m_pixelShader));
 
         if (compute_shader != nullptr) // check if data for optional compute shader is given
         {
