@@ -50,6 +50,8 @@ namespace dxowl
 
         ~Texture2D(){}; //TODO
 
+        void resize(ID3D11Device4* d3d11_device, UINT width, UINT height);
+
         inline D3D11_TEXTURE2D_DESC getTextureDesc() const
         {
             return m_desc;
@@ -205,9 +207,11 @@ namespace dxowl
                 shdr_rsrc_view = &shdr_rsrc_view_desc;
             }
 
+            m_shdr_rsrc_view_desc = *shdr_rsrc_view;
+
             hr = d3d11_device->CreateShaderResourceView(
                 m_texture.Get(),
-                shdr_rsrc_view,
+                &m_shdr_rsrc_view_desc,
                 m_shdr_rsrc_view.GetAddressOf());
 
             if (generate_mipmap) {
@@ -217,6 +221,50 @@ namespace dxowl
                 // generate mipmap if requested using device context
                 ctx->GenerateMips(m_shdr_rsrc_view.Get());
             }
+        }
+    }
+
+    inline void Texture2D::resize(ID3D11Device4* d3d11_device, UINT width, UINT height)
+    {
+        m_shdr_rsrc_view = nullptr;
+        m_unord_acc_view = nullptr;
+        m_texture = nullptr;
+
+        m_shdr_rsrc_view.Reset();
+        m_unord_acc_view.Reset();
+        m_texture.Reset();
+
+        m_desc.Width = width;
+        m_desc.Height = height;
+
+        HRESULT hr = d3d11_device->CreateTexture2D(
+            &m_desc,
+            nullptr,
+            m_texture.GetAddressOf()
+        );
+
+        if (m_desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+        {
+            hr = d3d11_device->CreateShaderResourceView(
+                m_texture.Get(),
+                &m_shdr_rsrc_view_desc,
+                m_shdr_rsrc_view.GetAddressOf());
+
+            if (m_desc.MipLevels > 1) {
+                Microsoft::WRL::ComPtr<ID3D11DeviceContext> ctx;
+                d3d11_device->GetImmediateContext(ctx.GetAddressOf());
+
+                // generate mipmap if requested using device context
+                ctx->GenerateMips(m_shdr_rsrc_view.Get());
+            }
+        }
+
+        if (m_desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+        {
+            hr = d3d11_device->CreateUnorderedAccessView(
+                m_texture.Get(),
+                &m_unord_acc_view_desc,
+                m_unord_acc_view.GetAddressOf());
         }
     }
 } // namespace dxowl
