@@ -140,7 +140,9 @@ namespace dxowl
                 &m_shdr_rsrc_view_desc,
                 m_shdr_rsrc_view.GetAddressOf());
 
-            if (m_desc.MipLevels > 1) {
+            if (m_desc.MipLevels > 1 &&
+                (m_desc.MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS))
+            {
                 Microsoft::WRL::ComPtr<ID3D11DeviceContext> ctx;
                 d3d11_device->GetImmediateContext(ctx.GetAddressOf());
 
