@@ -32,6 +32,8 @@ namespace dxowl
 
         ~Texture2D(){}; //TODO
 
+        void resize(ID3D11Device4* d3d11_device, UINT width, UINT height);
+
         inline D3D11_TEXTURE2D_DESC getTextureDesc() const
         {
             return m_desc;
@@ -112,6 +114,42 @@ namespace dxowl
         }
 
         //TODO do something with hr
+    }
+
+    inline void Texture2D::resize(ID3D11Device4* d3d11_device, UINT width, UINT height)
+    {
+        m_shdr_rsrc_view = nullptr;
+        m_texture = nullptr;
+
+        m_shdr_rsrc_view.Reset();
+        m_texture.Reset();
+
+        m_desc.Width = width;
+        m_desc.Height = height;
+
+        HRESULT hr = d3d11_device->CreateTexture2D(
+            &m_desc,
+            nullptr,
+            m_texture.GetAddressOf()
+        );
+
+        if (m_desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+        {
+            hr = d3d11_device->CreateShaderResourceView(
+                m_texture.Get(),
+                &m_shdr_rsrc_view_desc,
+                m_shdr_rsrc_view.GetAddressOf());
+
+            if (m_desc.MipLevels > 1 &&
+                (m_desc.MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS))
+            {
+                Microsoft::WRL::ComPtr<ID3D11DeviceContext> ctx;
+                d3d11_device->GetImmediateContext(ctx.GetAddressOf());
+
+                // generate mipmap if requested using device context
+                ctx->GenerateMips(m_shdr_rsrc_view.Get());
+            }
+        }
     }
 } // namespace dxowl
 
